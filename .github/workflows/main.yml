@@ -25,6 +25,7 @@ jobs:
         pip install selenium
 
     - name: Run script
+    working-directory: ./
       env:
         EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
