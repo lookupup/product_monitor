@@ -1,0 +1,72 @@
+import time
+import smtplib
+from email.mime.text import MIMEText
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import schedule
+
+# ====== 配置区 ======
+URL = "https://www.sephora.com.au/products/glo-skin-beauty-c-shield-anti-pollution-moisture-tint/v/1n"
+TARGET_PRICE = 50.00
+CHECK_INTERVAL = 10  # 检查间隔（分钟）
+
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 587
+EMAIL_ADDRESS = '你的邮箱'
+EMAIL_PASSWORD = '你的应用专用密码'
+TO_EMAIL = '收件邮箱'
+
+def send_email(subject, body):
+    msg = MIMEText(body, 'plain', 'utf-8')
+    msg['Subject'] = subject
+    msg['From'] = EMAIL_ADDRESS
+    msg['To'] = TO_EMAIL
+
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        server.send_message(msg)
+        print("📧 邮件已发送！")
+
+def check_product():
+    print("🔍 正在检查产品状态...")
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    driver = webdriver.Chrome(options=options)
+
+    try:
+        driver.get(URL)
+        time.sleep(5)
+
+        try:
+            out_of_stock_element = driver.find_element("xpath", "//span[contains(text(), 'Out of Stock')]")
+            in_stock = False
+        except:
+            in_stock = True
+
+        try:
+            price_element = driver.find_element("xpath", "//span[contains(@class, 'ProductPrice')]")
+            price_text = price_element.text.strip().replace('$', '')
+            price = float(price_text)
+        except:
+            price = None
+
+        print(f"库存状态: {'有货' if in_stock else '缺货'}")
+        print(f"当前价格: ${price if price else '未知'}")
+
+        if in_stock and price and price <= TARGET_PRICE:
+            subject = "🎉 Sephora商品有货且降价啦！"
+            body = f"👉 产品链接：{URL}\n💲 当前价格：${price}\n📦 库存状态：有货！\n赶快去抢购！"
+            send_email(subject, body)
+        else:
+            print("❄️ 条件未满足，等待下一次检查。")
+
+    except Exception as e:
+        print(f"发生错误: {e}")
+    finally:
+        driver.quit()
+
+if __name__ == "__main__":
+    check_product()
